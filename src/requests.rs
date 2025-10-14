@@ -741,10 +741,17 @@ fn tokenize_prompt(
                     num_tokens
                 )));
             }
+            //apply distribution options
+            let num_prompt_tokens = sample_num_tokens(
+                num_tokens,
+                options.min_tokens,
+                options.max_tokens,
+                options.distribution_mode.clone(),
+            );
             let tokens = prompt_tokens
                 .get_ids()
                 .iter()
-                .take(num_tokens as usize)
+                .take(num_prompt_tokens as usize)
                 .copied()
                 .collect::<Vec<u32>>();
             let prompt = tokenizer.decode(&tokens, true).unwrap();
