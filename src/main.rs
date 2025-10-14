@@ -160,50 +160,44 @@ fn parse_key_val(s: &str) -> Result<HashMap<String, String>, Error> {
 }
 
 fn parse_tokenizer_options(s: &str) -> Result<TokenizeOptions, Error> {
-    let mut options = TokenizeOptions::new();
-    let mut dist_spec: Option<&str> = None;
+    let mut opts = TokenizeOptions::new();
+    let mut items = s.split(',').map(str::trim).peekable();
 
-    for item in s.split(',') {
-        let trimmed = item.trim();
-
-        if trimmed.starts_with("dist=") {
-            dist_spec = Some(trimmed);
+    while let Some(item) = items.next() {
+        if item.starts_with("dist=") {
+            // Collect all tokens belonging to the distribution
+            let mut dist_str = String::from(item);
+            while let Some(&next) = items.peek() {
+                if next.starts_with("variance=")
+                    || next.starts_with("log_mean=")
+                    || next.starts_with("log_std=")
+                {
+                    dist_str.push(',');
+                    dist_str.push_str(next);
+                    items.next();
+                } else {
+                    break;
+                }
+            }
+            opts.distribution_mode = parse_distribution_mode(&dist_str)?;
             continue;
         }
 
-        let kv: Vec<&str> = trimmed.split('=').collect();
-        if kv.len() != 2 {
-            return Err(Error::new(InvalidValue));
-        }
-
-        let key = kv[0].trim();
-        let value = kv[1].trim();
-
+        // Regular key=value pairs
+        let (key, val) = item.split_once('=').ok_or_else(|| Error::new(InvalidValue))?;
         match key {
-            "num_tokens" => {
-                options.num_tokens = Some(value.parse::<u64>().map_err(|_| Error::new(InvalidValue))?);
-            }
-            "min_tokens" => {
-                options.min_tokens = value.parse::<u64>().map_err(|_| Error::new(InvalidValue))?;
-            }
-            "max_tokens" => {
-                options.max_tokens = value.parse::<u64>().map_err(|_| Error::new(InvalidValue))?;
-            }
+            "num_tokens" => opts.num_tokens = Some(val.parse().map_err(|_| Error::new(InvalidValue))?),
+            "min_tokens" => opts.min_tokens = val.parse().map_err(|_| Error::new(InvalidValue))?,
+            "max_tokens" => opts.max_tokens = val.parse().map_err(|_| Error::new(InvalidValue))?,
             _ => return Err(Error::new(InvalidValue)),
         }
     }
 
-    options.distribution_mode = if let Some(spec) = dist_spec {
-        parse_distribution_mode(spec)?
-    } else {
-        DistributionMode::Normal { variance: 0 } // default
-    };
-
-    if options.min_tokens > options.max_tokens {
+    if opts.min_tokens > opts.max_tokens {
         return Err(Error::new(InvalidValue));
     }
 
-    Ok(options)
+    Ok(opts)
 }
 
 
@@ -336,4 +330,20 @@ async fn main() {
         };
     });
     let _ = main_thread.await;
+}
+
+#[test]
+fn test_parse_tokenizer_options() {
+    let expected = TokenizeOptions {
+        num_tokens: Some(2500),
+        min_tokens: 1,
+        max_tokens: 131000,
+        distribution_mode: DistributionMode::LogNormal {
+            log_mean: 6.62,
+            log_std: 1.4,
+        }
+    };
+    let result = parse_tokenizer_options("num_tokens=2500,min_tokens=1,max_tokens=131000,dist=log_normal:log_mean=6.62,log_std=1.4");
+    assert!(result.is_ok());
+    assert_eq!(expected, result.unwrap());
 }

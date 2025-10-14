@@ -320,7 +320,7 @@ pub struct ConversationEntry {
     pub conversations: Vec<Conversation>,
 }
 
-#[derive(Clone, Serialize, Debug)]
+#[derive(Clone, Serialize, Debug, PartialEq)]
 pub struct TokenizeOptions {
     pub num_tokens: Option<u64>,
     pub min_tokens: u64,
@@ -358,7 +358,7 @@ impl Display for TokenizeOptions {
     }
 }
 
-#[derive(Clone, Serialize, Debug)]
+#[derive(Clone, Serialize, Debug, PartialEq)]
 pub enum DistributionMode {
     /// Normal (symmetric) distribution.
     Normal {
