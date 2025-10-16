@@ -64,15 +64,19 @@ def run(from_results_dir, datasource, port):
                 df_bench[plot['metric']] = df_bench[k] if k in df_bench.columns else 0
             res.append(df_bench[(df_bench['model'] == model)])
 
-        return res + [summary_table()]
+        return res + [metadata_table(), summary_table()]
+
+    def metadata_table() -> pd.DataFrame:
+        data = df_bench[['run_id', 'engine', 'version', 'device', 'tp']].drop_duplicates().sort_values(by=['run_id'])
+        return data
 
     def summary_table() -> pd.DataFrame:
-        data = df_bench.groupby(['model', 'run_id', 'rate']).agg(
+        data = df_bench.groupby(['model', 'run_id', 'engine', 'version', 'device', 'tp', 'rate']).agg(
             {'inter_token_latency_ms_p90': 'mean', 'time_to_first_token_ms_p90': 'mean',
              'e2e_latency_ms_p90': 'mean', 'token_throughput_secs': 'mean',
              'successful_requests': 'mean', 'error_rate': 'mean'}).reset_index()
         data = data[
-            ['run_id', 'model', 'rate', 'inter_token_latency_ms_p90', 'time_to_first_token_ms_p90',
+            ['run_id', 'model', 'engine', 'version', 'device', 'tp', 'rate', 'inter_token_latency_ms_p90', 'time_to_first_token_ms_p90',
              'e2e_latency_ms_p90',
              'token_throughput_secs']]
         for metric in ['inter_token_latency_ms_p90', 'time_to_first_token_ms_p90', 'e2e_latency_ms_p90',
@@ -165,6 +169,11 @@ def run(from_results_dir, datasource, port):
         with gr.Row():
             model = gr.Dropdown(list(models), label="Select model", value=models[0])
         with gr.Row():
+            metadata = gr.DataFrame(
+                pd.DataFrame(),
+                elem_classes=["summary"],
+            )
+        with gr.Row():
             percentiles_bench = gr.Radio(percentiles, label="", value="avg")
         i = 0
         with ExitStack() as stack:
@@ -186,13 +195,13 @@ def run(from_results_dir, datasource, port):
 
         for component in [model, percentiles_bench]:
             component.change(update_bench, [model, percentiles_bench],
-                             [item["component"] for item in line_plots_bench] + [table])
+                             [item["component"] for item in line_plots_bench] + [metadata, table])
         gr.on([plot["component"].select for plot in line_plots_bench], select_region, [model],
               outputs=[item["component"] for item in line_plots_bench])
         gr.on([plot["component"].double_click for plot in line_plots_bench], reset_region, None,
               outputs=[item["component"] for item in line_plots_bench])
         demo.load(load_demo, [model, percentiles_bench],
-                  [item["component"] for item in line_plots_bench] + [table])
+                  [item["component"] for item in line_plots_bench] + [metadata, table])
 
     demo.launch(server_port=port, server_name="0.0.0.0")
 
