@@ -93,7 +93,7 @@ pub struct OpenAITextGenerationResponse {
 pub struct OpenAITextGenerationRequest {
     pub model: String,
     pub messages: Vec<OpenAITextGenerationMessage>,
-    pub max_tokens: Option<u64>,
+    pub max_completion_tokens: Option<u64>,
     pub stream: bool,
     pub stop: Option<String>,
     pub temperature: f64,
@@ -139,7 +139,7 @@ impl TextGenerationBackend for OpenAITextGenerationBackend {
         let body = OpenAITextGenerationRequest {
             model: self.model_name.clone(),
             messages,
-            max_tokens: request.num_decode_tokens,
+            max_completion_tokens: request.num_decode_tokens,
             stream: true,
             stop: None,
             temperature: 0.0,
