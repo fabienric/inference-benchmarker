@@ -342,7 +342,7 @@ impl Benchmark {
 
     pub async fn run_perf(&mut self) -> anyhow::Result<()> {
         for i in std::iter::successors(Some(1u64), |&n| n.checked_mul(2).filter(|&x| x <= self.config.max_vus)) {
-            self.run_throughput_at(i)?
+            self.run_throughput_at(i).await?;
         }
         Ok(())
     }
