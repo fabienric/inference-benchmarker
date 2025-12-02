@@ -1,6 +1,6 @@
 use clap::error::ErrorKind::InvalidValue;
 use clap::{ArgGroup, Error, Parser};
-use inference_benchmarker::{run, RunConfiguration, TokenizeOptions, DistributionMode};
+use inference_benchmarker::{run, RunConfiguration, TokenizeOptions, DistributionMode, BenchmarkKind};
 use log::{debug, error};
 use reqwest::Url;
 use std::collections::HashMap;
@@ -38,7 +38,7 @@ struct Args {
     profile: Option<String>,
     /// The kind of benchmark to run (throughput, sweep, optimum)
     #[clap(default_value = "sweep", short, long, env, group = "group_manual")]
-    benchmark_kind: String,
+    benchmark_kind: BenchmarkKind,
     /// The duration of the prewarm step ran before the benchmark to warm up the backend (JIT, caches, etc.)
     #[clap(default_value = "30s", short, long, env, group = "group_manual")]
     #[arg(value_parser = parse_duration)]
