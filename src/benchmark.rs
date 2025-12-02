@@ -359,7 +359,7 @@ impl Benchmark {
         let mut failed_requests = 0u64;
 
 
-        for i in std::iter::successors(Some(1u64), |&n| n.checked_mul(2).filter(|&x| x <= self.config.max_vus)).collect() {
+        for i in std::iter::successors(Some(1u64), |&n| n.checked_mul(2).filter(|&x| x <= self.config.max_vus)) {
             // start scheduler
             let mut scheduler = scheduler::Scheduler::new(
                 id.clone(),
