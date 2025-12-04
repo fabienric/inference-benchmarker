@@ -17,7 +17,7 @@ class PlotConfig:
     percentiles: List[float] = None
 
 
-def run(from_results_dir, datasource, port):
+def run(from_results_dir, datasource, port, mode="rate"):
     css = '''
     .summary span {
         font-size: 10px;
@@ -41,13 +41,15 @@ def run(from_results_dir, datasource, port):
     * Error rate: The percentage of requests that ended up in error, as the system could not process them in time or failed to process them. 
           
     '''
+    # mode = rate (QPS: req/s) or vu (throughput)
+    x_title = "QPS" if mode == "rate" else "VU"
 
     df_bench = pd.DataFrame()
     line_plots_bench = []
     column_mappings = {'inter_token_latency_ms_p90': 'ITL P90 (ms)', 'time_to_first_token_ms_p90': 'TTFT P90 (ms)',
                        'e2e_latency_ms_p90': 'E2E P90 (ms)', 'token_throughput_secs': 'Throughput (tokens/s)',
                        'successful_requests': 'Successful requests', 'error_rate': 'Error rate (%)', 'model': 'Model',
-                       'rate': 'QPS', 'run_id': 'Run ID'}
+                       'rate': x_title, 'run_id': 'Run ID', 'request_rate': 'QPS'}
     default_df = pd.DataFrame.from_dict(
         {"rate": [1, 2], "inter_token_latency_ms_p90": [10, 20],
          "version": ["default", "default"],
@@ -89,9 +91,13 @@ def run(from_results_dir, datasource, port):
     def load_bench_results(source) -> pd.DataFrame:
         data = pd.read_parquet(source)
         # remove warmup and throughput
-        data = data[(data['id'] != 'warmup') & (data['id'] != 'throughput')]
+        #data = data[(data['id'] != 'warmup') & (data['id'] != 'throughput')]
+        data = data[(data['id'] != 'warmup')]
         # only keep constant rate
-        data = data[data['executor_type'] == 'ConstantArrivalRate']
+        #data = data[data['executor_type'] == 'ConstantArrivalRate']
+
+        print(data)
+        data.to_excel("output.xlsx")
         return data
 
     def select_region(selection: gr.SelectData, model):
@@ -125,27 +131,33 @@ def run(from_results_dir, datasource, port):
         build_results(from_results_dir, 'benchmarks.parquet', None)
     # Load data
     df_bench = load_datasource(datasource, load_bench_results)
-
+    print("df_bench")
+    print(df_bench["request_rate"])
     # Define metrics
     metrics = {
-        "inter_token_latency_ms": PlotConfig(title="Inter Token Latency (lower is better)", x_title="QPS",
+        "inter_token_latency_ms": PlotConfig(title="Inter Token Latency (lower is better)", x_title=x_title,
                                              y_title="Time (ms)", percentiles=[0.5, 0.6, 0.7, 0.8, 0.9, 0.95, 0.99]),
-        "time_to_first_token_ms": PlotConfig(title="TTFT (lower is better)", x_title="QPS",
+        "time_to_first_token_ms": PlotConfig(title="TTFT (lower is better)", x_title=x_title,
                                              y_title="Time (ms)", percentiles=[0.5, 0.6, 0.7, 0.8, 0.9, 0.95, 0.99]),
-        "e2e_latency_ms": PlotConfig(title="End to End Latency (lower is better)", x_title="QPS",
+        "e2e_latency_ms": PlotConfig(title="End to End Latency (lower is better)", x_title=x_title,
                                      y_title="Time (ms)", percentiles=[0.5, 0.6, 0.7, 0.8, 0.9, 0.95, 0.99]),
-        "token_throughput_secs": PlotConfig(title="Request Output Throughput (higher is better)", x_title="QPS",
+        "token_throughput_secs": PlotConfig(title="Request Output Throughput (higher is better)", x_title=x_title,
                                             y_title="Tokens/s"),
-        "successful_requests": PlotConfig(title="Successful requests (higher is better)", x_title="QPS",
+        "successful_requests": PlotConfig(title="Successful requests (higher is better)", x_title=x_title,
                                           y_title="Count"),
-        "error_rate": PlotConfig(title="Error rate", x_title="QPS", y_title="%"),
-        "prompt_tokens": PlotConfig(title="Prompt tokens", x_title="QPS", y_title="Count"),
-        "decoded_tokens": PlotConfig(title="Decoded tokens", x_title="QPS", y_title="Count")
+        "error_rate": PlotConfig(title="Error rate", x_title=x_title, y_title="%"),
+        "prompt_tokens": PlotConfig(title="Prompt tokens", x_title=x_title, y_title="Count"),
+        "decoded_tokens": PlotConfig(title="Decoded tokens", x_title=x_title, y_title="Count")
     }
 
+    if mode == "throughput":
+        metrics["request_rate"] = PlotConfig(title="Request rate (req/s)", x_title=x_title,
+                                   y_title="QPS", percentiles=[0.5, 0.6, 0.7, 0.8, 0.9, 0.95, 0.99])
+
     models = df_bench["model"].unique()
+    print(models)
     run_ids = df_bench["run_id"].unique()
-    max_qps_value = df_bench["rate"].max()
+    max_x_value = df_bench["rate"].max()
 
     # get all available percentiles
     percentiles = set()
@@ -170,7 +182,7 @@ def run(from_results_dir, datasource, port):
         with gr.Row():
             model = gr.Dropdown(list(models), label="Select model", value=models[0])
         with gr.Row():
-            max_qps = gr.Number(label="Max QPS", value=max_qps_value)
+            max_qps = gr.Number(label=f"Max {x_title}", value=max_x_value)
         with gr.Row():
             metadata = gr.DataFrame(
                 pd.DataFrame(),
@@ -213,8 +225,9 @@ def run(from_results_dir, datasource, port):
 @click.option('--from-results-dir', default=None, help='Load inference-benchmarker results from a directory')
 @click.option('--datasource', default='file://benchmarks.parquet', help='Load a Parquet file already generated')
 @click.option('--port', default=7860, help='Port to run the dashboard')
-def main(from_results_dir, datasource, port):
-    run(from_results_dir, datasource, port)
+@click.option('--mode', default='rate', help='Benchmark mode: rate or throughput')
+def main(from_results_dir, datasource, port, mode):
+    run(from_results_dir, datasource, port, mode)
 
 
 if __name__ == '__main__':

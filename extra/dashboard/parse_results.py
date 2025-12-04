@@ -55,6 +55,10 @@ def build_results(results_dir, results_file, device):
     df['error_rate'] = df['failed_requests'] / (df['failed_requests'] + df['successful_requests']) * 100.0
     df['prompt_tokens'] = df['total_tokens_sent'] / df['successful_requests']
     df['decoded_tokens'] = df['total_tokens'] / df['successful_requests']
+
+    if df['rate'].isna().all():
+        df['rate'] = df['id'].apply(lambda x: 0 if x == "warmup" else int(x[len("throughput@"):].replace("VU", "")))
+
     df.to_parquet(results_file)
 
 
