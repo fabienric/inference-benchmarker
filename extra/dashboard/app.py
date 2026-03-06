@@ -144,21 +144,21 @@ def run(from_results_dir, datasource, port, mode="rate"):
 
     # Define metrics
     metrics = {
+        "per_request_speed": PlotConfig(title="Per-Request Speed — tok/s per request (higher is better)", x_title=x_title,
+                                        y_title="Tokens/s/req", percentiles=available_percentiles),
+        "token_throughput_secs": PlotConfig(title="System Throughput — total tok/s across all requests (higher is better)", x_title=x_title,
+                                            y_title="Tokens/s"),
+        "e2e_latency_ms": PlotConfig(title="End to End Latency (lower is better)", x_title=x_title,
+                                     y_title="Time (ms)", percentiles=available_percentiles),
+        "successful_requests": PlotConfig(title="Successful requests (higher is better)", x_title=x_title,
+                                          y_title="Count"),
         "inter_token_latency_ms": PlotConfig(title="Inter Token Latency (lower is better)", x_title=x_title,
                                              y_title="Time (ms)", percentiles=available_percentiles),
         "time_to_first_token_ms": PlotConfig(title="TTFT (lower is better)", x_title=x_title,
                                              y_title="Time (ms)", percentiles=available_percentiles),
-        "e2e_latency_ms": PlotConfig(title="End to End Latency (lower is better)", x_title=x_title,
-                                     y_title="Time (ms)", percentiles=available_percentiles),
-        "token_throughput_secs": PlotConfig(title="System Throughput — total tok/s across all requests (higher is better)", x_title=x_title,
-                                            y_title="Tokens/s"),
-        "per_request_speed": PlotConfig(title="Per-Request Speed — tok/s per user (higher is better)", x_title=x_title,
-                                         y_title="Tokens/s/req", percentiles=available_percentiles),
-        "successful_requests": PlotConfig(title="Successful requests (higher is better)", x_title=x_title,
-                                          y_title="Count"),
-        "error_rate": PlotConfig(title="Error rate", x_title=x_title, y_title="%"),
         "prompt_tokens": PlotConfig(title="Prompt tokens", x_title=x_title, y_title="Count"),
-        "decoded_tokens": PlotConfig(title="Decoded tokens", x_title=x_title, y_title="Count")
+        "decoded_tokens": PlotConfig(title="Decoded tokens", x_title=x_title, y_title="Count"),
+        "error_rate": PlotConfig(title="Error rate", x_title=x_title, y_title="%"),
     }
 
     if mode == "throughput":
