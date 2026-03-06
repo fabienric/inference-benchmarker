@@ -135,20 +135,25 @@ def run(from_results_dir, datasource, port, mode="rate"):
         build_results(from_results_dir, 'benchmarks.parquet', None)
     # Load data
     df_bench = load_datasource(datasource, load_bench_results)
-    print("df_bench")
-    print(df_bench["request_rate"])
+
+    # get all available percentiles
+    available_percentiles = [0.5, 0.6, 0.7, 0.8, 0.9, 0.95, 0.99]
+    percentiles = map(lambda p: f'p{int(float(p) * 100)}', available_percentiles)
+    percentiles = sorted(list(percentiles))
+    percentiles.append('avg')
+
     # Define metrics
     metrics = {
         "inter_token_latency_ms": PlotConfig(title="Inter Token Latency (lower is better)", x_title=x_title,
-                                             y_title="Time (ms)", percentiles=[0.5, 0.6, 0.7, 0.8, 0.9, 0.95, 0.99]),
+                                             y_title="Time (ms)", percentiles=available_percentiles),
         "time_to_first_token_ms": PlotConfig(title="TTFT (lower is better)", x_title=x_title,
-                                             y_title="Time (ms)", percentiles=[0.5, 0.6, 0.7, 0.8, 0.9, 0.95, 0.99]),
+                                             y_title="Time (ms)", percentiles=available_percentiles),
         "e2e_latency_ms": PlotConfig(title="End to End Latency (lower is better)", x_title=x_title,
-                                     y_title="Time (ms)", percentiles=[0.5, 0.6, 0.7, 0.8, 0.9, 0.95, 0.99]),
+                                     y_title="Time (ms)", percentiles=available_percentiles),
         "token_throughput_secs": PlotConfig(title="System Throughput — total tok/s across all requests (higher is better)", x_title=x_title,
                                             y_title="Tokens/s"),
         "per_request_speed": PlotConfig(title="Per-Request Speed — tok/s per user (higher is better)", x_title=x_title,
-                                         y_title="Tokens/s/req"),
+                                         y_title="Tokens/s/req", percentiles=available_percentiles),
         "successful_requests": PlotConfig(title="Successful requests (higher is better)", x_title=x_title,
                                           y_title="Count"),
         "error_rate": PlotConfig(title="Error rate", x_title=x_title, y_title="%"),
@@ -158,21 +163,13 @@ def run(from_results_dir, datasource, port, mode="rate"):
 
     if mode == "throughput":
         metrics["request_rate"] = PlotConfig(title="Request rate (req/s)", x_title=x_title,
-                                   y_title="QPS", percentiles=[0.5, 0.6, 0.7, 0.8, 0.9, 0.95, 0.99])
+                                   y_title="QPS", percentiles=available_percentiles)
 
     models = df_bench["model"].unique()
     print(models)
     run_ids = df_bench["run_id"].unique()
     max_x_value = df_bench["rate"].max()
 
-    # get all available percentiles
-    percentiles = set()
-    for k, v in metrics.items():
-        if v.percentiles:
-            percentiles.update(v.percentiles)
-    percentiles = map(lambda p: f'p{int(float(p) * 100)}', percentiles)
-    percentiles = sorted(list(percentiles))
-    percentiles.append('avg')
     with gr.Blocks(css=css, title="Inference Benchmarker") as demo:
         with gr.Row():
             gr.Markdown("# Inference-benchmarker 🤗\n## Benchmarks results")

@@ -55,8 +55,14 @@ def build_results(results_dir, results_file, device):
     df['error_rate'] = df['failed_requests'] / (df['failed_requests'] + df['successful_requests']) * 100.0
     df['prompt_tokens'] = df['total_tokens_sent'] / df['successful_requests']
     df['decoded_tokens'] = df['total_tokens'] / df['successful_requests']
-    # Per-request speed: decoded tokens per request / avg E2E latency in seconds
-    df['per_request_speed'] = df['decoded_tokens'] / (df['e2e_latency_ms_avg'] / 1000.0)
+    # Per-request speed: decoded tokens per request / E2E latency in seconds
+    available_percentiles = [0.5, 0.6, 0.7, 0.8, 0.9, 0.95, 0.99]
+    percentiles = map(lambda p: f'p{int(float(p) * 100)}', available_percentiles)
+    percentiles = sorted(list(percentiles))
+    percentiles.append('avg')
+
+    for p in percentiles:
+        df[f'per_request_speed_{p}'] = df['decoded_tokens'] / (df[f'e2e_latency_ms_{p}'] / 1000.0)
 
     if df['rate'].isna().all():
         df['rate'] = df['id'].apply(lambda x: 0 if x == "warmup" else int(x[len("throughput@"):].replace("VU", "")))
