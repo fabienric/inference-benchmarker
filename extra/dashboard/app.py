@@ -17,7 +17,7 @@ class PlotConfig:
     percentiles: List[float] = None
 
 
-def run(from_results_dir, datasource, port, mode="rate"):
+def run(from_results_dir, datasource, port, mode="rate", color_map=None):
     css = '''
     .summary span {
         font-size: 10px;
@@ -204,7 +204,8 @@ def run(from_results_dir, datasource, port, mode="rate"):
                 line_plots_bench.append(
                     {"component": gr.LinePlot(default_df, label=f'{v.title}', x="rate", y=k,
                                               y_title=v.y_title, x_title=v.x_title,
-                                              color="run_id"
+                                              color="run_id",
+                                              color_map=color_map,
                                               ),
                      "model": model.value,
                      "metric": k,
@@ -232,8 +233,15 @@ def run(from_results_dir, datasource, port, mode="rate"):
 @click.option('--datasource', default='file://benchmarks.parquet', help='Load a Parquet file already generated')
 @click.option('--port', default=7860, help='Port to run the dashboard')
 @click.option('--mode', default='rate', help='Benchmark mode: rate or throughput')
-def main(from_results_dir, datasource, port, mode):
-    run(from_results_dir, datasource, port, mode)
+@click.option('--color-map', '--cm', default=None, multiple=True, type=(str, str), help='Customize the plot colors (format: --cm run-id red)')
+def main(from_results_dir, datasource, port, mode, color_map):
+
+    if len(color_map) == 0:
+        color_map = None
+    else:
+        color_map = {k: v for k, v in color_map}
+
+    run(from_results_dir, datasource, port, mode, color_map)
 
 
 if __name__ == '__main__':
