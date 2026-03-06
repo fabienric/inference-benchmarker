@@ -144,7 +144,7 @@ def run(from_results_dir, datasource, port, mode="rate"):
 
     # Define metrics
     metrics = {
-        "per_request_speed": PlotConfig(title="Per-Request Speed — tok/s per request (higher is better)", x_title=x_title,
+        "per_request_speed": PlotConfig(title="Per-Request Throughput — tok/s per request (higher is better)", x_title=x_title,
                                         y_title="Tokens/s/req", percentiles=available_percentiles),
         "token_throughput_secs": PlotConfig(title="System Throughput — total tok/s across all requests (higher is better)", x_title=x_title,
                                             y_title="Tokens/s"),
