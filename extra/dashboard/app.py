@@ -233,7 +233,7 @@ def run(from_results_dir, datasource, port, mode="rate", color_map=None):
 @click.option('--datasource', default='file://benchmarks.parquet', help='Load a Parquet file already generated')
 @click.option('--port', default=7860, help='Port to run the dashboard')
 @click.option('--mode', default='rate', help='Benchmark mode: rate or throughput')
-@click.option('--color-map', '--cm', default=None, multiple=True, type=(str, str), help='Customize the plot colors (format: --cm run-id red)')
+@click.option('--color-map', '--cm', default=None, multiple=True, type=(str, str), help='Customize the plot colors (format: --cm run-id color)')
 def main(from_results_dir, datasource, port, mode, color_map):
 
     if len(color_map) == 0:
