@@ -56,19 +56,19 @@ def run(from_results_dir, datasource, port, mode="rate", color_map=None):
          "version": ["default", "default"],
          "model": ["default", "default"]})
 
-    def load_demo(model_bench, run_id_filter, max_qps, percentiles):
-        return update_bench(model_bench, run_id_filter, max_qps, percentiles)
+    def load_demo(model_bench, run_id_filter, min_qps, max_qps, percentiles):
+        return update_bench(model_bench, run_id_filter, min_qps, max_qps, percentiles)
 
-    def update_bench(model, run_id_filter, max_qps, percentiles):
+    def update_bench(model, run_id_filter, min_qps, max_qps, percentiles):
         res = []
         for plot in line_plots_bench:
             if plot['config'].percentiles:
                 k = plot['metric'] + '_' + str(percentiles)
                 df_bench[plot['metric']] = df_bench[k] if k in df_bench.columns else 0
             if len(run_id_filter) > 0:
-                res.append(df_bench[(df_bench['model'] == model) & (df_bench['rate'] <= max_qps) & (df_bench['run_id'].isin(run_id_filter))])
+                res.append(df_bench[(df_bench['model'] == model) & (df_bench['rate'] >= min_qps) & (df_bench['rate'] <= max_qps) & (df_bench['run_id'].isin(run_id_filter))])
             else:
-                res.append(df_bench[(df_bench['model'] == model) & (df_bench['rate'] <= max_qps)])
+                res.append(df_bench[(df_bench['model'] == model) & (df_bench['rate'] >= min_qps) & (df_bench['rate'] <= max_qps)])
 
         return res + [metadata_table(), summary_table()]
 
@@ -168,6 +168,7 @@ def run(from_results_dir, datasource, port, mode="rate", color_map=None):
     models = df_bench["model"].unique()
     print(models)
     run_ids = df_bench["run_id"].unique()
+    min_x_value = df_bench["rate"].min()
     max_x_value = df_bench["rate"].max()
 
     with gr.Blocks(css=css, title="Inference Benchmarker") as demo:
@@ -186,6 +187,8 @@ def run(from_results_dir, datasource, port, mode="rate", color_map=None):
             model = gr.Dropdown(list(models), label="Select model", value=models[0])
         with gr.Row():
             run_id_filter = gr.Dropdown(list(run_ids), multiselect=True, label="Select run IDS", value=[])
+        with gr.Row():
+            min_qps = gr.Number(label=f"Min {x_title}", value=min_x_value)
         with gr.Row():
             max_qps = gr.Number(label=f"Max {x_title}", value=max_x_value)
         with gr.Row():
@@ -206,6 +209,7 @@ def run(from_results_dir, datasource, port, mode="rate", color_map=None):
                                               y_title=v.y_title, x_title=v.x_title,
                                               color="run_id",
                                               color_map=color_map,
+                                              height=300
                                               ),
                      "model": model.value,
                      "metric": k,
@@ -214,7 +218,7 @@ def run(from_results_dir, datasource, port, mode="rate", color_map=None):
                 )
                 i += 1
 
-        update_params = [model, run_id_filter, max_qps, percentiles_bench]
+        update_params = [model, run_id_filter, min_qps, max_qps, percentiles_bench]
         for component in update_params:
             component.change(update_bench, update_params,
                              [item["component"] for item in line_plots_bench] + [metadata, table])
